@@ -35,16 +35,43 @@ def gen():
 	pass
 def enc():
 	pass
-def enc():
+def dec():
 	pass
 
 def main():
 	while True:
 		if args.mode == "gen":
 			print_info('Запущен режим создания ключей')
+			if not os.path.exists('setting.json'):
+				with open('setting.json', 'w') as file:
+					json.dump(settings, file)
+			with open('settings.json', 'w') as json_file:
+				settings_data = json.load(json_file)
+			gen()
+			break
 
 		elif args.mode == "enc":
 			print_info('Запущен режим шифрования')
+			if not os.path.exists('setting.json'):
+				with open('setting.json', 'w') as file:
+					json.dump(settings, file)
+			with open('settings.json', 'w') as json_file:
+				settings_data = json.load(json_file)	
+			enc()
+			break	
 
 		elif args.mode == "dec":
 			print_info('Запущен режим дешифрования')
+			if not os.path.exists('setting.json'):
+				with open('setting.json', 'w') as file:
+					json.dump(settings, file)
+			with open('settings.json', 'w') as json_file:
+				settings_data = json.load(json_file)	
+			dec()
+			break
+		else:
+			print("че то не то...")	
+			break
+	pass
+
+
