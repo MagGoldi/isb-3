@@ -20,9 +20,9 @@ settings = {
 	'secret_key': 'secret_key.pem',  # путь к закрытому ключу
 	'vec_init': 'iv.txt'
 }
-# gen  = Запускает режим генерации ключей
-# enc  = Запускает режим шифрования
-# dec  = Запускает режим дешифрования
+# python main.py gen  = Запускает режим генерации ключей
+# python main.py enc  = Запускает режим шифрования
+# python main.py dec  = Запускает режим дешифрования
 
 parser = argparse.ArgumentParser()
 parser.add_argument('mode', help='Режим работы')
@@ -39,12 +39,17 @@ def print_info(text):
 
 def generation(symmetric_k, public_k, secret_k):
 	print('Длина ключа от 32 до 448 бит с шагом 8 бит')
-	key_len = int(input('Введите длину ключа: '))
+	key_len = int(input('Введите желаемую длину ключа: '))
 
 	while True:
+		# проверка правильности введенной желаемой длины ключа
 		if key_len % 8 != 0 or key_len < 32 or key_len > 448:
-			key_len = int(input('Введите длину ключа: '))
-		else: break
+			key_len = int(input('Введите желаемую длину ключа: '))
+		else:
+			break
+	key = os.urandom(key_len)  # генерация ключа с длиной key_len
+	with open(symmetric_k, 'wb') as key_file:
+		key_file.write(key)
 
 	# генерация пары ключей для асимметричного алгоритма шифрования
 	keys = rsa.generate_private_key(
@@ -77,7 +82,6 @@ def generation(symmetric_k, public_k, secret_k):
 	print(f'Ключи асимметричного шифрования сериализованы по адресу: {public_k}\t{secret_k}')
 	print(f"Ключ симметричного шифрования:\t{symmetric_k}")
 	pass
-
 	
 
 def encrypting(inital_f, secret_k, symmetric_k, encrypted_f, vec_init):
@@ -107,53 +111,95 @@ def encrypting(inital_f, secret_k, symmetric_k, encrypted_f, vec_init):
 	print(f"Текст зашифрован и сериализован по адресу: {encrypted_f}")
 	pass
 
-def decrypting():
+def decrypting(encrypted_f, secret_k, symmetric_k, decrypted_file, vec_init):
+	with open(secret_k, 'rb') as pem_in:
+		private_bytes = pem_in.read()
+	private_key = load_pem_private_key(private_bytes, password=None, )
+	with open(symmetric_k, 'rb') as key:
+		symmetric_bytes = key.read()
+	from cryptography.hazmat.primitives.asymmetric import padding
+	d_key = private_key.decrypt(symmetric_bytes,
+								padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),
+											 label=None))
+	with open(encrypted_f, 'rb') as e_text:
+		text = e_text.read()
+	# дешифрование и депаддинг текста симметричным алгоритмом
+	with open(vec_init, 'rb') as iv_file:
+		iv = iv_file.read()
+	cipher = Cipher(algorithms.Blowfish(d_key), modes.CBC(iv))
+	decrypter = cipher.decryptor()
+	from cryptography.hazmat.primitives import padding
+	unpadded = padding.ANSIX923(64).unpadder()
+	d_text = unpadded.update(decrypter.update(text) + decrypter.finalize()) + unpadded.finalize()
+	print("Расшифрованный текст:")
+	print(d_text.decode('UTF-8'))
+	with open(decrypted_file, 'w', encoding='UTF-8') as decrypt_file:
+		decrypt_file.write(d_text.decode('UTF-8'))
+	print(f"Текст расшифрован и сериализован по адресу:  {decrypted_file} ")
 	pass
+
 
 def main():
 	while True:
-		if args.mode == "gen":
+		if args.mode == 'gen':
 			print_info('Запущен режим создания ключей')
-
-			if not os.path.exists('setting.json'):
-				with open('setting.json', 'w') as file:
-					json.dump(settings, file)
+			if not os.path.exists('settings.json'):
+				with open('settings.json', 'w') as fp:
+					json.dump(settings, fp)
 			with open('settings.json', 'r') as json_file:
 				settings_data = json.load(json_file)
 			generation(settings_data['symmetric_key'], settings_data['public_key'], settings_data['secret_key'])
 			break
-
-		elif args.mode == "enc":
+		elif args.mode == 'enc':
 			print_info('Запущен режим шифрования')
-			if not os.path.exists('setting.json'):
-				with open('setting.json', 'w') as file:
-					json.dump(settings, file)
+			if not os.path.exists('settings.json'):
+				with open('settings.json', 'w') as fp:
+					json.dump(settings, fp)
 			with open('settings.json', 'r') as json_file:
 				settings_data = json.load(json_file)
-
-
-				#проверку добавить	
-			encrypting(settings_data['encrypted_file'], settings_data['secret_key'],
-					   settings_data['symmetric_key'], settings_data['decrypted_file'], settings_data['vec_init'])
-			break	
-
-		elif args.mode == "dec":
+			if not os.path.exists('file.txt'):
+				print('Отсутствует файл с исходным текстом, скачивание с git')
+				url = 'https://github.com/MagGoldi/isb-3/blob/main/files/file.txt'
+				wget.download(url, os.getcwd())
+				print('\n')
+			if not os.path.exists(settings_data['secret_key']):
+				print('Не найден закрытый ключ. Используйте сначала режим gen')
+				break
+			if not os.path.exists(settings_data['symmetric_key']):
+				print('Не найден симметричный ключ. Используйте сначала режим gen')
+				break
+			encrypting(settings_data['initial_file'], settings_data['secret_key'],
+					   settings_data['symmetric_key'], settings_data['encrypted_file'], settings_data['vec_init'])
+			break
+		elif args.mode == 'dec':
 			print_info('Запущен режим дешифрования')
-			if not os.path.exists('setting.json'):
-				with open('setting.json', 'w') as file:
-					json.dump(settings, file)
+			if not os.path.exists('settings.json'):
+				with open('settings.json', 'w') as fp:
+					json.dump(settings, fp)
 			with open('settings.json', 'r') as json_file:
 				settings_data = json.load(json_file)
-
-
-
-					#проверку добавить	
+			if not os.path.exists('file.txt'):
+				print('Отсутствует файл с исходным текстом, скачивание с git')
+				url = 'https://github.com/MagGoldi/isb-3/blob/main/files/file.txt'
+				wget.download(url, os.getcwd())
+				print('\n')
+			if not os.path.exists(settings_data['secret_key']):
+				print('Не найден закрытый ключ. Используйте сначала режим gen')
+				break
+			if not os.path.exists(settings_data['symmetric_key']):
+				print('Не найден симметричный ключ. Используйте сначала режим gen')
+				break
+			if not os.path.exists(settings_data['encrypted_file']):
+				print('Не найден зашифрованный файл. Используйте сначала режим enc')
+				break
 			decrypting(settings_data['encrypted_file'], settings_data['secret_key'],
 					   settings_data['symmetric_key'], settings_data['decrypted_file'], settings_data['vec_init'])
 			break
 		else:
-			print("че то не то...")	
+			print('что то не то...')
 			break
 	pass
 
 
+if __name__ == '__main__':
+	main()
