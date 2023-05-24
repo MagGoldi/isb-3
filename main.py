@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 
 def generation(symmetric_k, public_k, secret_k):
-    print('Длина ключа от 32 до 448 бит с шагом 8 бит')
+    print('Длина ключа от 32 до 448 бит с шагом 8 бит') #биты
     key_len = int(input('Введите желаемую длину ключа: '))
 
     while True:
@@ -141,10 +141,9 @@ def decrypting(encrypted_f, secret_k, symmetric_k, decrypted_file, vec_init):
     
 
 
-def main():
+def main(args):
     while True:
-        if args.mode == 'gen':
-            print_info('Запущен режим создания ключей')
+        if args.generation:
             if not os.path.exists('settings.json'):
                 with open('settings.json', 'w') as fp:
                     json.dump(settings, fp)
@@ -155,8 +154,7 @@ def main():
                 settings_data['public_key'],
                 settings_data['secret_key'])
             break
-        elif args.mode == 'enc':
-            print_info('Запущен режим шифрования')
+        elif args.encryption:
             if not os.path.exists('settings.json'):
                 with open('settings.json', 'w') as fp:
                     json.dump(settings, fp)
@@ -176,8 +174,7 @@ def main():
             encrypting(settings_data['initial_file'], settings_data['secret_key'],
                        settings_data['symmetric_key'], settings_data['encrypted_file'], settings_data['vec_init'])
             break
-        elif args.mode == 'dec':
-            print_info('Запущен режим дешифрования')
+        elif args.decryption:
             if not os.path.exists('settings.json'):
                 with open('settings.json', 'w') as fp:
                     json.dump(settings, fp)
@@ -207,4 +204,14 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-set', '--settings', type=str, help='Позволяет использовать собственный json-файл с указанием '
+                                                             'необходимых путей для работы системы '
+                                                             '(Введите путь к файлу)')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-gen', '--generation', type=int, help='Запускает режим генерации ключей (Введите длину '
+                                                              'симметричного ключа (4 - 56 байт))')
+    group.add_argument('-enc', '--encryption', help='Запускает режим шифрования')
+    group.add_argument('-dec', '--decryption', help='Запускает режим дешифрования')
+    args = parser.parse_args()
+    main(args)
