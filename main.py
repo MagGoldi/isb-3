@@ -17,8 +17,10 @@ if __name__ == '__main__':
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-gen', '--generation', type=int, help='Запускает режим генерации ключей (Введите длину '
                                                               'симметричного ключа (4 - 56 байт))')
-    group.add_argument('-enc', '--encryption', help='Запускает режим шифрования')
-    group.add_argument('-dec', '--decryption', help='Запускает режим дешифрования')
+    group.add_argument('-enc', '--encryption',
+                       help='Запускает режим шифрования')
+    group.add_argument('-dec', '--decryption',
+                       help='Запускает режим дешифрования')
     args = parser.parse_args()
     settings = None
     if args.settings:
@@ -31,11 +33,15 @@ if __name__ == '__main__':
             if 4 <= length_key <= 56:
                 symmetric_key = gen_symmetric_key(length_key)
                 private_key, public_key = gen_private_public_key()
-                save_asymmetric_keys(private_key, public_key, settings['secret_key'], settings['public_key'])
-                cipher_symmetric_key = asymmetric_encrypt(public_key, symmetric_key)
-                save_symmetric_key(cipher_symmetric_key, settings['symmetric_key'])
+                save_asymmetric_keys(
+                    private_key, public_key, settings['secret_key'], settings['public_key'])
+                cipher_symmetric_key = asymmetric_encrypt(
+                    public_key, symmetric_key)
+                save_symmetric_key(cipher_symmetric_key,
+                                   settings['symmetric_key'])
             else:
-                logging.warning('Symmetric key must be between 4 and 56 bytes long')
+                logging.warning(
+                    'Symmetric key must be between 4 and 56 bytes long')
         elif args.encryption:
             private_key = load_private_key(settings['secret_key'])
             cipher_key = load_symmetric_key(settings['symmetric_key'])
@@ -50,6 +56,3 @@ if __name__ == '__main__':
             cipher_text = byte_read_text(settings['encrypted_file'])
             text = symmetric_decrypt(symmetric_key, cipher_text)
             byte_write_text(text, settings['decrypted_file'])
-        else:
-            print("что то не то")
-
